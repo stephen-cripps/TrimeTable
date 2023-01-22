@@ -8,11 +8,17 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.widget.RemoteViews
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 /**
  * Implementation of App Widget functionality.
  */
 class Tridget : AppWidgetProvider() {
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -30,23 +36,19 @@ class Tridget : AppWidgetProvider() {
 
         val action = intent!!.action?: ""
 
-        if(context!= null && action == "increase"){
-            // Update preferences
-            val prefs = context.getSharedPreferences(context.packageName, Context.MODE_PRIVATE)
-            prefs.edit().putString("widgetText", (prefs.getString("widgetText", "0")!!.toInt() + 1).toString()).apply()
-            updateWidgets(context)
+        if(context!= null && action == "refresh"){
+            fetchData(context)
         }
     }
 
     override fun onEnabled(context: Context) {
-        val prefs = context.getSharedPreferences(context.packageName, Context.MODE_PRIVATE)
-        prefs.edit().putString("widgetText", "0").apply()
-        updateWidgets(context)
+        fetchData(context)
     }
 
     override fun onDisabled(context: Context) {
         // Enter relevant functionality for when the last widget is disabled
     }
+
     // Update All Widgets
     private fun updateWidgets(context: Context){
         val manager = AppWidgetManager.getInstance(context)
@@ -54,6 +56,50 @@ class Tridget : AppWidgetProvider() {
 
         // Update every widget
         ids.forEach { id -> updateAppWidget(context, manager, id) }
+    }
+
+    private fun fetchData(context: Context){
+        val retrofitBuilder = Retrofit.Builder()
+            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl("https://api.tfgm.com/odata/")
+            .build()
+            .create(ApiInterface::class.java)
+
+        val retrofitData = retrofitBuilder.getMetroData()
+
+        retrofitData.enqueue(object : Callback<MetrolinkResponse?> {
+            override fun onResponse(
+                call: Call<MetrolinkResponse?>,
+                response: Response<MetrolinkResponse?>
+            ) {
+                updateView(response.body(), context)
+            }
+
+            override fun onFailure(call: Call<MetrolinkResponse?>, t: Throwable) {
+                Log.d("fetchfail", t.message!!)
+                // Temp for testing
+                val views = RemoteViews(context.packageName, R.layout.tridget)
+                views.setTextViewText(R.id.dest1, t.message!!)
+            }
+        })
+    }
+
+    // Tutorial https://www.youtube.com/watch?v=5gFrXGbQsc8
+    private fun updateView(body: MetrolinkResponse?, context: Context){
+        var data = body?.value ?: listOf()
+        data = data.filter { x -> x.StationLocation == "Edge Lane" }
+
+        val stringBuilder = StringBuilder()
+        for(item in data) {
+            stringBuilder.append(item.Dest0 + ": " + item.Wait0 + "mins\n")
+            stringBuilder.append(item.Dest1 + ": " + item.Wait1 + "mins\n")
+            stringBuilder.append(item.Dest2 + ": " + item.Wait2 + "mins\n")
+            stringBuilder.append(item.Dest3 + ": " + item.Wait3 + "mins\n")
+        }
+
+        val prefs = context.getSharedPreferences(context.packageName, Context.MODE_PRIVATE)
+        prefs.edit().putString("widgetText", stringBuilder.toString()).apply()
+        updateWidgets(context)
     }
 
     private fun pendingIntent(
@@ -75,16 +121,14 @@ class Tridget : AppWidgetProvider() {
     ) {
         val prefs = context.getSharedPreferences(context.packageName, Context.MODE_PRIVATE)
         val widgetText = prefs.getString("widgetText", "0") ?: "hello"
-        Log.d("UpdateWidget", widgetText)
         // Construct the RemoteViews object
         val views = RemoteViews(context.packageName, R.layout.tridget)
-        views.setTextViewText(R.id.textView, widgetText)
+        views.setTextViewText(R.id.dest1, widgetText)
 
         // Launch a pending intent to increase the count
-        views.setOnClickPendingIntent(R.id.button, pendingIntent(context,"increase"))
+        views.setOnClickPendingIntent(R.id.button, pendingIntent(context,"refresh"))
 
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 }
-
