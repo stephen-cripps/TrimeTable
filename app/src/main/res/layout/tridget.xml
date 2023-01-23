@@ -16,61 +16,17 @@
         android:text="Refresh" />
 
     <TextView
-        android:id="@+id/dest1"
+        android:id="@+id/data"
         android:layout_width="375dp"
         android:layout_height="594dp"
         />
 
     <TextView
-        android:id="@+id/due1"
-        android:layout_width="100dp"
-        android:layout_height="50dp"
-        android:layout_alignParentRight="true"
-        />
-
-    <TextView
-        android:id="@+id/dest2"
-        android:layout_width="250dp"
-        android:layout_height="50dp"
-        android:layout_marginVertical="60dp"
-        />
-
-    <TextView
-        android:id="@+id/due2"
-        android:layout_width="100dp"
-        android:layout_height="50dp"
-        android:layout_alignParentRight="true"
-        android:layout_marginVertical="60dp"
-        />
-
-    <TextView
-        android:id="@+id/dest3"
-        android:layout_width="250dp"
-        android:layout_height="50dp"
-        android:layout_marginVertical="120dp"
-        />
-
-    <TextView
-        android:id="@+id/due3"
-        android:layout_width="100dp"
-        android:layout_height="50dp"
-        android:layout_alignParentRight="true"
-        android:layout_marginVertical="120dp"
-        />
-
-    <TextView
-        android:id="@+id/dest4"
-        android:layout_width="250dp"
-        android:layout_height="50dp"
-        android:layout_marginVertical="180dp"
-        />
-
-    <TextView
-        android:id="@+id/due4"
-        android:layout_width="100dp"
-        android:layout_height="50dp"
-        android:layout_alignParentRight="true"
-        android:layout_marginVertical="180dp"
-        />
+        android:id="@+id/loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginRight="10dp"
+        android:layout_marginBottom="5dp"/>
 
 </RelativeLayout>

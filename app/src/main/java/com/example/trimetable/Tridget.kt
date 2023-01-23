@@ -34,9 +34,9 @@ class Tridget : AppWidgetProvider() {
         // Handle intent broadcasts
         super.onReceive(context, intent)
 
-        val action = intent!!.action?: ""
+        val action = intent!!.action ?: ""
 
-        if(context!= null && action == "refresh"){
+        if (context != null && action == "refresh") {
             fetchData(context)
         }
     }
@@ -50,7 +50,7 @@ class Tridget : AppWidgetProvider() {
     }
 
     // Update All Widgets
-    private fun updateWidgets(context: Context){
+    private fun updateWidgets(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
         val ids = manager.getAppWidgetIds(ComponentName(context, javaClass))
 
@@ -58,7 +58,12 @@ class Tridget : AppWidgetProvider() {
         ids.forEach { id -> updateAppWidget(context, manager, id) }
     }
 
-    private fun fetchData(context: Context){
+    private fun fetchData(context: Context) {
+        val views = RemoteViews(context.packageName, R.layout.tridget)
+        views.setTextViewText(R.id.loading, "Fetching Data...")
+        val componentName = ComponentName(context, Tridget::class.java)
+        AppWidgetManager.getInstance(context).updateAppWidget(componentName, views)
+
         val retrofitBuilder = Retrofit.Builder()
             .addConverterFactory(GsonConverterFactory.create())
             .baseUrl("https://api.tfgm.com/odata/")
@@ -66,6 +71,8 @@ class Tridget : AppWidgetProvider() {
             .create(ApiInterface::class.java)
 
         val retrofitData = retrofitBuilder.getMetroData()
+
+
 
         retrofitData.enqueue(object : Callback<MetrolinkResponse?> {
             override fun onResponse(
@@ -78,28 +85,38 @@ class Tridget : AppWidgetProvider() {
             override fun onFailure(call: Call<MetrolinkResponse?>, t: Throwable) {
                 Log.d("fetchfail", t.message!!)
                 // Temp for testing
-                val views = RemoteViews(context.packageName, R.layout.tridget)
-                views.setTextViewText(R.id.dest1, t.message!!)
+                views.setTextViewText(R.id.loading, t.message)
+                AppWidgetManager.getInstance(context).updateAppWidget(componentName, views)
             }
         })
     }
 
     // Tutorial https://www.youtube.com/watch?v=5gFrXGbQsc8
-    private fun updateView(body: MetrolinkResponse?, context: Context){
+    private fun updateView(body: MetrolinkResponse?, context: Context) {
         var data = body?.value ?: listOf()
         data = data.filter { x -> x.StationLocation == "Edge Lane" }
 
         val stringBuilder = StringBuilder()
-        for(item in data) {
-            stringBuilder.append(item.Dest0 + ": " + item.Wait0 + "mins\n")
-            stringBuilder.append(item.Dest1 + ": " + item.Wait1 + "mins\n")
-            stringBuilder.append(item.Dest2 + ": " + item.Wait2 + "mins\n")
-            stringBuilder.append(item.Dest3 + ": " + item.Wait3 + "mins\n")
+        for (item in data) {
+            if (item.Dest0 != "")
+                stringBuilder.append(item.Dest0 + ": " + item.Wait0 + "mins\n")
+            if (item.Dest1 != "")
+                stringBuilder.append(item.Dest1 + ": " + item.Wait1 + "mins\n")
+            if (item.Dest2 != "")
+                stringBuilder.append(item.Dest2 + ": " + item.Wait2 + "mins\n")
+            if (item.Dest3 != "")
+                stringBuilder.append(item.Dest3 + ": " + item.Wait3 + "mins\n")
+            stringBuilder.append("\n")
         }
 
-        val prefs = context.getSharedPreferences(context.packageName, Context.MODE_PRIVATE)
-        prefs.edit().putString("widgetText", stringBuilder.toString()).apply()
-        updateWidgets(context)
+        if (data[0].MessageBoard != "")
+            stringBuilder.append(data[0].MessageBoard)
+
+        val views = RemoteViews(context.packageName, R.layout.tridget)
+        views.setTextViewText(R.id.data, stringBuilder.toString())
+        views.setTextViewText(R.id.loading, "")
+        val componentName = ComponentName(context, Tridget::class.java)
+        AppWidgetManager.getInstance(context).updateAppWidget(componentName, views)
     }
 
     private fun pendingIntent(
@@ -119,14 +136,15 @@ class Tridget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
     ) {
-        val prefs = context.getSharedPreferences(context.packageName, Context.MODE_PRIVATE)
-        val widgetText = prefs.getString("widgetText", "0") ?: "hello"
-        // Construct the RemoteViews object
-        val views = RemoteViews(context.packageName, R.layout.tridget)
-        views.setTextViewText(R.id.dest1, widgetText)
+//        val prefs = context.getSharedPreferences(context.packageName, Context.MODE_PRIVATE)
+//        val widgetText = prefs.getString("widgetText", "0") ?: "hello"
+//        // Construct the RemoteViews object
+//        views.setTextViewText(R.id.dest1, widgetText)
+
 
         // Launch a pending intent to increase the count
-        views.setOnClickPendingIntent(R.id.button, pendingIntent(context,"refresh"))
+        val views = RemoteViews(context.packageName, R.layout.tridget)
+        views.setOnClickPendingIntent(R.id.button, pendingIntent(context, "refresh"))
 
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views)
